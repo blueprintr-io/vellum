@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vellum</title>
+    <!--
+      Content-Security-Policy — defense-in-depth for the SVG inlining sites
+      (Shape.tsx, IconResultCard.tsx, RecentTile.tsx). 'unsafe-inline' on
+      style-src is required by Tailwind's runtime classes and Radix's inline
+      positioning. img-src and connect-src list api.iconify.design for icon
+      previews; remove those entries if you swap iconify for a self-hosted
+      icon source.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://api.iconify.design; connect-src 'self' https://api.iconify.design; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

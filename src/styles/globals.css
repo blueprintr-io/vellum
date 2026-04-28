@@ -1,0 +1,190 @@
+@import './fonts.css';
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body,
+  #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    /* Default to no native text selection: Vellum is a canvas app, not a
+     * webpage. Highlighting is done via marquee + the inspector. Native
+     * selection inside chrome (a label dragged on its drag-cursor, a swatch
+     * tooltip, etc.) confuses the gesture system and looks wrong against the
+     * canvas. We re-enable selection explicitly inside places where typing
+     * happens — see the [contenteditable] rule + .vellum-text-selectable
+     * escape hatch below. */
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+  }
+  /* Re-enable selection for typing surfaces. contentEditable elements in the
+   * inline label/cell/connector editors need real selection so the bold /
+   * italic / underline / select-all / drag-to-select text affordances work.
+   * Explicit form inputs already get sensible browser defaults but we set
+   * user-select on them too so a parent that disables selection doesn't leak
+   * onto them. */
+  [contenteditable='true'],
+  [contenteditable=''],
+  input,
+  textarea,
+  select,
+  .vellum-text-selectable {
+    user-select: text;
+    -webkit-user-select: text;
+    -ms-user-select: text;
+  }
+  button {
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+}
+
+@layer components {
+  /* Floating chrome treatment — used by toolbar, popover, brand, inspector, docks.
+   * The drop shadow is the ONLY drop shadow allowed; floating panels sit over the
+   * paper canvas, so they earn the shadow. Anywhere else, use shadow-blueprint. */
+  .float {
+    background: rgb(var(--bg-rgb) / 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.18), 0 0 0 1px rgb(0 0 0 / 0.04);
+  }
+
+  html.theme-light .float {
+    box-shadow: 0 2px 8px rgb(36 41 47 / 0.06), 0 0 0 1px rgb(36 41 47 / 0.04);
+  }
+
+  /* Inspector field grid — 70px label + input. Matches the design micro-spec exactly. */
+  .field {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .field-label {
+    font-size: 10px;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+  }
+
+  .field-input {
+    padding: 5px 8px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--fg);
+    font-size: 11px;
+    font-family: var(--font-body);
+    width: 100%;
+  }
+
+  .field-input.mono {
+    font-family: var(--font-mono);
+  }
+
+  /* Segmented control — used everywhere in the inspector. */
+  .seg {
+    display: flex;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px;
+    width: 100%;
+  }
+
+  .seg button {
+    flex: 1;
+    padding: 4px 4px;
+    background: transparent;
+    border: none;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--fg-muted);
+    border-radius: 3px;
+  }
+
+  .seg button.active {
+    background: var(--bg-emphasis);
+    color: var(--fg);
+  }
+
+  /* Metadata key/value rows. */
+  .metadata-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+  .metadata-row .k {
+    color: var(--fg-muted);
+    padding: 4px 6px;
+    background: var(--bg-subtle);
+    border-radius: 3px;
+  }
+  .metadata-row .v {
+    color: var(--fg);
+    padding: 4px 6px;
+    background: var(--bg-subtle);
+    border-radius: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* One-shot ring for the "I just snapped" feedback when a connector
+   * endpoint clicks onto a shape during creation. Subtle by design — a
+   * single quick expanding ring that fades fully to 0 (no leftover dot,
+   * no halo). Driven by a keyed remount so the animation runs once per
+   * snap-target change. */
+  @keyframes vellum-snap-pulse {
+    0% {
+      opacity: 0.5;
+      transform: scale(0.6);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.3);
+    }
+  }
+
+  /* Kbd hint — used in popover search + footer. */
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 5px;
+    background: var(--bg-emphasis);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--fg-muted);
+    line-height: 1.4;
+  }
+}
