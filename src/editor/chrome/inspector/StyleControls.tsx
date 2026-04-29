@@ -138,16 +138,24 @@ export function SwatchRow({
   const colorRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div ref={wrapperRef} className="flex items-center gap-[3px] flex-wrap">
-      {/* Auto/default cell — `A` for "auto". Visually grouped as its own
-       *  thing with a right margin so it's clearly distinct from the colour
-       *  presets that follow. Without the spacer, in dark mode the cell's
-       *  bg-subtle (#161b22) sits right next to var(--paper) (#1d2230) for
-       *  the .fill row, and the two near-identical slates make the auto
-       *  cell read as "missing" — for .stroke/.text the adjacent --ink is
-       *  near-white so the auto cell pops naturally. The "A" itself uses
-       *  text-fg (not text-fg-muted) so it stays legible regardless of
-       *  what colour the kind happens to put next to it. */}
+    // Grid (not flex-wrap) so every cell occupies a deterministic column
+    // slot. With flex-wrap, row 1 ends mid-row at whatever cell happens to
+    // hit the container edge, and row 2's cells pack left from x=0 — the
+    // result is row 2 columns drift left of row 1 columns by however much
+    // gap-padding+leading-cell the row 1 prefix consumed. CSS grid pins
+    // every cell to a fixed 20px column track, so row N column M always
+    // sits at the same x as row N+1 column M — within a row pair AND
+    // across the .stroke / .fill rows of the same surface. The
+    // `auto-fill` keeps the responsive wrap-on-narrow-panel behaviour the
+    // old flex layout had.
+    <div
+      ref={wrapperRef}
+      className="grid items-center gap-[3px]"
+      style={{ gridTemplateColumns: 'repeat(auto-fill, 20px)' }}
+    >
+      {/* Auto/default cell — `A` for "auto". The "A" uses text-fg (not
+       *  text-fg-muted) so it stays legible regardless of what colour the
+       *  kind happens to put next to it. */}
       <SwatchCell
         title="default (auto)"
         active={isDefault}
@@ -155,7 +163,15 @@ export function SwatchRow({
       >
         <span className="font-mono text-[10px] text-fg leading-none">A</span>
       </SwatchCell>
-      <span aria-hidden className="inline-block w-[5px] shrink-0" />
+      {/* Phantom cell — fill has `paper` here, stroke does not. Rendering
+       *  an empty grid item in stroke's `paper` slot keeps the colour
+       *  columns perfectly aligned between the .stroke and .fill rows
+       *  (so red-stroke and red-fill share a column, as the file-header
+       *  comment promises). The cell is invisible and skipped for tab /
+       *  pointer navigation. */}
+      {kind === 'stroke' && (
+        <span aria-hidden style={{ width: 20, height: 20 }} />
+      )}
       {presets.map((p) => (
         <SwatchCellWithShades
           key={p.value}

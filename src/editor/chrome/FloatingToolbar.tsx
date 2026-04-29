@@ -128,11 +128,18 @@ export function FloatingToolbar() {
        *  but its dedicated trigger lives over there now — this slot is the
        *  dwellable surface. */}
       <ToolButton
-        title="Shapes & icons (toggle library panel)"
+        title="Shapes & icons — S (toggle library panel)"
         onClick={toggleLibraryPanel}
         active={libraryPanelOpen}
       >
         <I.more />
+        <span
+          className={`absolute bottom-[2px] right-[3px] font-mono text-[8px] leading-none ${
+            libraryPanelOpen ? 'text-accent opacity-85' : 'text-fg-muted'
+          }`}
+        >
+          S
+        </span>
       </ToolButton>
       {/* Notes-layer contextual button. Slides in next to the toolbar whenever
        *  the Notes layer is in scope. Tinted to match Notes-layer ink so it
