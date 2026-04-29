@@ -11,6 +11,7 @@ import { handleNew, handleOpen, handleSaveAs } from './files';
  *                           9=pen)
  *    L                      laser pointer
  *    T                      table
+ *    S                      toggle library panel
  *    Cmd+K (or Ctrl+K)      open searchable picker
  *    Q                      toggle tool lock
  *    Esc                    close any open overlay; clear selection
@@ -254,6 +255,13 @@ export function useKeybindings() {
       // tool
       if (!meta && (key === 'q' || key === 'Q')) {
         useEditor.getState().toggleLock();
+        return;
+      }
+      // S → toggle library panel. Unmodified S only — Cmd+S is save (above)
+      // and Shift+S is reserved for future use; this fires on the bare key
+      // like Q/L/T.
+      if (!meta && !shift && (key === 's' || key === 'S')) {
+        useEditor.getState().toggleLibraryPanel();
         return;
       }
 
