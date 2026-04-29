@@ -47,23 +47,37 @@ export const STATIC_SWATCH_VALUES = new Set<string>([
 
 /** Coloured fills. Both hexes line up with what tokens.css writes for
  *  --fill-{name} under each theme — keep them in sync if you tweak either
- *  one. */
+ *  one.
+ *
+ *  Ordered by colour-wheel position (red → orange → amber → green → teal →
+ *  blue → indigo → violet → pink) so the swatch row reads as a continuous
+ *  hue gradient rather than a random pile. The four "secondary" hues
+ *  (orange, teal, indigo, pink) were added 2026-04-29 to fill the gaps
+ *  between the original red/amber/green/blue/violet wheel. */
 export const FILL_SWATCHES: Swatch[] = [
   { id: 'red', label: 'red', cssVar: 'var(--fill-red)', lightHex: '#fee2e2', darkHex: '#4a2424' },
+  { id: 'orange', label: 'orange', cssVar: 'var(--fill-orange)', lightHex: '#ffedd5', darkHex: '#4a3318' },
   { id: 'amber', label: 'amber', cssVar: 'var(--fill-amber)', lightHex: '#fff3c4', darkHex: '#4a3f1c' },
   { id: 'green', label: 'green', cssVar: 'var(--fill-green)', lightHex: '#dcfce7', darkHex: '#1f4332' },
+  { id: 'teal', label: 'teal', cssVar: 'var(--fill-teal)', lightHex: '#ccfbf1', darkHex: '#1a4a44' },
   { id: 'blue', label: 'blue', cssVar: 'var(--fill-blue)', lightHex: '#dbeafe', darkHex: '#1f2f4a' },
+  { id: 'indigo', label: 'indigo', cssVar: 'var(--fill-indigo)', lightHex: '#e0e7ff', darkHex: '#2a2f4a' },
   { id: 'violet', label: 'violet', cssVar: 'var(--fill-violet)', lightHex: '#f3e8ff', darkHex: '#3a224a' },
+  { id: 'pink', label: 'pink', cssVar: 'var(--fill-pink)', lightHex: '#fce7f3', darkHex: '#4a223a' },
 ];
 
 /** Coloured strokes. Same conventions as FILL_SWATCHES. The light values are
  *  the original Vellum stroke palette so legacy diagrams resolve correctly. */
 export const STROKE_SWATCHES: Swatch[] = [
   { id: 'red', label: 'red', cssVar: 'var(--stroke-red)', lightHex: '#c83e1d', darkHex: '#f7755a' },
+  { id: 'orange', label: 'orange', cssVar: 'var(--stroke-orange)', lightHex: '#ea580c', darkHex: '#fb923c' },
   { id: 'amber', label: 'amber', cssVar: 'var(--stroke-amber)', lightHex: '#e09f3e', darkHex: '#f5c277' },
   { id: 'green', label: 'green', cssVar: 'var(--stroke-green)', lightHex: '#2e8b57', darkHex: '#5fc285' },
+  { id: 'teal', label: 'teal', cssVar: 'var(--stroke-teal)', lightHex: '#0d9488', darkHex: '#5fc2b8' },
   { id: 'blue', label: 'blue', cssVar: 'var(--stroke-blue)', lightHex: '#1f6feb', darkHex: '#6aa4ff' },
+  { id: 'indigo', label: 'indigo', cssVar: 'var(--stroke-indigo)', lightHex: '#4f46e5', darkHex: '#818cf8' },
   { id: 'violet', label: 'violet', cssVar: 'var(--stroke-violet)', lightHex: '#7f3fbf', darkHex: '#b07ce0' },
+  { id: 'pink', label: 'pink', cssVar: 'var(--stroke-pink)', lightHex: '#db2777', darkHex: '#f0689f' },
 ];
 
 /** Shade rungs. The base swatch above sits at -300 (or -200 in light mode);

@@ -7,8 +7,15 @@ import { useEditor } from '@/store/editor';
 import { I } from './icons';
 import { LIBRARIES, type Library } from './libraries';
 import { IconSearchResults } from './icons/IconSearchResults';
+import { IconPacksBrowser } from './IconPacksBrowser';
 import { LibraryShapeTile } from './LibraryShapeTile';
 import { RecentTile } from './RecentTile';
+
+/** Sentinel tab id for the Icon Packs browser. Mirrors MoreShapesPopover so
+ *  the two surfaces use the same magic id — pulled inline (rather than
+ *  exported from a shared module) since it's two lines and exporting one
+ *  string for two callers is more ceremony than it earns. */
+const ICON_PACKS_TAB = '__iconpacks__';
 
 /** Persistent left-rail library card. Surfaces the same catalog as
  *  MoreShapesPopover but as a tall, dwellable panel — the muscle memory is
@@ -38,10 +45,13 @@ export function LibraryPanel() {
 
   // Synthetic Personal lib derived from persisted slice (same shape as the
   // popover so the search-across-libs path stays consistent).
+  // version is intentionally blank — the "local" badge was redundant chrome
+  // (everything Personal is local) and consumed tab-strip width that's now
+  // needed for the Icon Packs entry.
   const personalLib: Library = {
     id: 'personal',
     name: 'Personal',
-    version: 'local',
+    version: '',
     shapes: personal.map((p, i) => ({
       id: `personal-${i}`,
       label: p.label,
@@ -126,15 +136,34 @@ export function LibraryPanel() {
             )}
           </button>
         ))}
+        {/* Icon Packs lives at the end of the tab strip — the existing tabs
+         *  are user-shape libraries; this one is a vendor catalogue browser
+         *  with its own pin/drill UX, hence the dedicated entry. */}
+        <button
+          key={ICON_PACKS_TAB}
+          onClick={() => setTab(ICON_PACKS_TAB)}
+          className={`flex-shrink-0 bg-transparent border-none px-[8px] py-[4px] text-[11px] font-medium rounded-[5px] whitespace-nowrap flex items-center gap-[6px] ${tab === ICON_PACKS_TAB && !q
+              ? 'text-fg bg-bg-emphasis'
+              : 'text-fg-muted hover:text-fg hover:bg-bg-emphasis'
+            }`}
+        >
+          Icon Packs
+        </button>
       </div>
 
       {/* Tile grid — 3 columns to fit the narrower panel. When the user is
        *  searching, IconSearchResults appends Vendor + Iconify sections below
        *  the library shapes so a single search hits all three sources. */}
       <div className="p-[8px] overflow-y-auto flex-1">
-        {/* Recent tab — render from store. Search bypasses Recent so the
-         *  user's typing only matches the static catalog + Iconify results. */}
-        {tab === 'recent' && !q ? (
+        {/* Icon Packs — dedicated browse surface (mirrors MoreShapesPopover).
+         *  Hidden during active search so the user's query still resolves
+         *  through the cross-library scan instead of being trapped in this
+         *  view. */}
+        {tab === ICON_PACKS_TAB && !q ? (
+          <IconPacksBrowser cols={3} />
+        ) : /* Recent tab — render from store. Search bypasses Recent so the
+         *  user's typing only matches the static catalog + Iconify results. */
+        tab === 'recent' && !q ? (
           recentShapes.length > 0 ? (
             <>
               <div className="flex items-center justify-between mb-[6px] px-1">

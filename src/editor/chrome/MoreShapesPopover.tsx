@@ -7,8 +7,14 @@ import { useEditor } from '@/store/editor';
 import { I } from './icons';
 import { LIBRARIES, type Library } from './libraries';
 import { IconSearchResults } from './icons/IconSearchResults';
+import { IconPacksBrowser } from './IconPacksBrowser';
 import { LibraryShapeTile } from './LibraryShapeTile';
 import { RecentTile } from './RecentTile';
+
+/** Sentinel tab id for the Icon Packs browser. Picked to avoid colliding
+ *  with any current or future Library.id (those are kebab-case vendor /
+ *  notation names — leading-underscore guarantees no overlap). */
+const ICON_PACKS_TAB = '__iconpacks__';
 
 export function MoreShapesPopover() {
   const open = useEditor((s) => s.morePopoverOpen);
@@ -25,10 +31,13 @@ export function MoreShapesPopover() {
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   // Build a synthetic Personal library entry from the persisted slice.
+  // version intentionally blank — the "local" label was redundant chrome
+  // (everything in this tab is local) and it crowded the tab strip enough
+  // to push later tabs (incl. Icon Packs) out of view at narrow widths.
   const personalLib: Library = {
     id: 'personal',
     name: 'Personal',
-    version: 'local',
+    version: '',
     shapes: personal.map((p, i) => ({
       id: `personal-${i}`,
       label: p.label,
@@ -119,16 +128,36 @@ export function MoreShapesPopover() {
             )}
           </button>
         ))}
+        {/* Icon Packs sits at the end of the tab strip — it's a different
+         *  surface (vendor catalogue browser) so it gets its own tile rather
+         *  than masquerading as a library. */}
+        <button
+          key={ICON_PACKS_TAB}
+          onClick={() => setTab(ICON_PACKS_TAB)}
+          className={`flex-shrink-0 bg-transparent border-none px-[10px] py-[5px] text-[11px] font-medium rounded-[5px] whitespace-nowrap flex items-center gap-[6px] ${
+            tab === ICON_PACKS_TAB
+              ? 'text-fg bg-bg-emphasis'
+              : 'text-fg-muted hover:text-fg hover:bg-bg-emphasis'
+          }`}
+        >
+          Icon Packs
+        </button>
       </div>
 
       {/* Result body — library shapes first, then IconSearchResults appends
        *  Vendor + Iconify sections when there's a query. */}
       <div className="p-[10px] overflow-y-auto">
-        {/* Recent tab is special-cased: tiles are derived from store activity,
+        {/* Icon Packs tab — its own browse surface with pinning. Only honoured
+         *  when there's no active query; once the user types we fall through
+         *  to the cross-library search so they don't get stuck inside the
+         *  packs view while looking for something. */}
+        {tab === ICON_PACKS_TAB && !q ? (
+          <IconPacksBrowser cols={4} />
+        ) : /* Recent tab is special-cased: tiles are derived from store activity,
          *  drag handler picks the right MIME based on the entry's source.
          *  Search ignores Recent — when the user is typing they're looking
-         *  for something new, and the icon results below cover the icon side. */}
-        {tab === 'recent' && !q ? (
+         *  for something new, and the icon results below cover the icon side. */
+        tab === 'recent' && !q ? (
           recentShapes.length > 0 ? (
             <>
               <div className="flex items-center justify-between mb-[6px] px-1">

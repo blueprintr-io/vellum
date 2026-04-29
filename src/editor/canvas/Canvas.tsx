@@ -1156,29 +1156,39 @@ export function Canvas() {
         }
         return cur;
       };
+      // Walk shapes in render order so hit-testing agrees with what the
+      // user sees. Render sorts by `.z` ascending (see the items.sort below
+      // around line ~5350), so the visually topmost shape is the LAST
+      // entry in z-ascending order. Iterating raw array order is wrong:
+      // bringToFront / sendToBack mutate `.z` but not array position, so
+      // a "sent to back" shape is still last in `visibleShapes` and a
+      // reverse-array walk wrongly resolves it on top of whatever now
+      // visually covers it. Stable tiebreak on original array index keeps
+      // the makeContainer-prepends-anchor case (inner container at a
+      // lower index than outer) working — same as before.
+      const zSorted = visibleShapes
+        .map((s, i) => ({ s, i }))
+        .sort((a, b) => {
+          const dz = (a.s.z ?? 0) - (b.s.z ?? 0);
+          return dz !== 0 ? dz : a.i - b.i;
+        });
       // Topmost non-frame hit (groups and containers are frames — searched
       // last so their bodies don't win over a child sitting on top).
-      for (let i = visibleShapes.length - 1; i >= 0; i--) {
-        const s = visibleShapes[i];
+      for (let i = zSorted.length - 1; i >= 0; i--) {
+        const s = zSorted[i].s;
         if (s.kind === 'group' || s.kind === 'container') continue;
         if (pointInShape(p, s)) return findRoot(s);
       }
       // Otherwise a frame body itself — container OR group. Picking the
       // smallest-bbox containing frame is what we actually want here: with
       // nested containers, the inner one has the smaller bbox AND is the
-      // one the user is reaching for. The previous "iterate by array
-      // index" approach was wrong because makeContainer prepends new
-      // containers (so they render BEHIND their anchor child) — which
-      // means with a wrap-an-existing-container path, the inner container
-      // ends up at a LOWER index than the outer, so reverse-iteration
-      // picked the outer and the inner became unclickable. Tiebreak on
-      // later-in-array (= top of stack) when two frames are the same
-      // size, which is the normal "newer renders in front" rule.
+      // one the user is reaching for. Tiebreak by z (= top of stack) when
+      // two frames are the same size — the normal "newer renders in front"
+      // rule, but tracked through `.z` so it survives reorder commands.
       let bestFrame: ShapeT | null = null;
       let bestArea = Infinity;
-      let bestIdx = -1;
-      for (let i = 0; i < visibleShapes.length; i++) {
-        const s = visibleShapes[i];
+      let bestZ = -Infinity;
+      for (const { s } of zSorted) {
         if (s.kind !== 'group' && s.kind !== 'container') continue;
         if (!pointInShape(p, s)) continue;
         // The focused group's body is "transparent" to hit-testing while
@@ -1188,13 +1198,14 @@ export function Canvas() {
         // exits focus by clicking a sibling group's body.
         if (s.kind === 'group' && s.id === focusedGroupId) continue;
         const area = Math.max(0, s.w) * Math.max(0, s.h);
+        const z = s.z ?? 0;
         if (
           area < bestArea ||
-          (area === bestArea && i > bestIdx)
+          (area === bestArea && z > bestZ)
         ) {
           bestFrame = s;
           bestArea = area;
-          bestIdx = i;
+          bestZ = z;
         }
       }
       return bestFrame ? findRoot(bestFrame) : null;

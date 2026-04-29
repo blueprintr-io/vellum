@@ -563,6 +563,14 @@ export type EditorState = {
   recentShapes: RecentEntry[];
   recordRecent: (entry: RecentEntry) => void;
   clearRecent: () => void;
+
+  // Pinned vendor icon packs — surfaced at the top of the Icon Packs browser
+  // tab. Stored as ordered manifest vendor keys ("aws-service", "azure", …);
+  // first entry is rendered first. Right-click on a pack tile toggles. Persisted
+  // so favourites survive reloads — pinning is muscle memory, it would feel
+  // broken if it reset every session.
+  pinnedIconPacks: string[];
+  togglePinnedIconPack: (vendorKey: string) => void;
 };
 
 /** Persisted slice — hotkey bindings, theme, and the user's personal shape
@@ -591,6 +599,7 @@ type PersistedSlice = Pick<
   | 'inspectorOpen'
   | 'tipsEnabled'
   | 'hoverEdgeConnectors'
+  | 'pinnedIconPacks'
 >;
 
 /** A user-saved shape (or group) ready to drop back onto a future canvas. */
@@ -2679,6 +2688,21 @@ export const useEditor = create<EditorState>()(
           set((s) => ({
             personalLibrary: s.personalLibrary.filter((_, i) => i !== index),
           })),
+
+        // pinned icon packs — toggle moves a vendor key in/out of the front of
+        // the list. Front-of-list (rather than append) so a freshly pinned
+        // pack jumps to the top, which is what "pin" implies.
+        pinnedIconPacks: [],
+        togglePinnedIconPack: (vendorKey) =>
+          set((s) => {
+            const idx = s.pinnedIconPacks.indexOf(vendorKey);
+            if (idx >= 0) {
+              return {
+                pinnedIconPacks: s.pinnedIconPacks.filter((_, i) => i !== idx),
+              };
+            }
+            return { pinnedIconPacks: [vendorKey, ...s.pinnedIconPacks] };
+          }),
       };
     },
     {
@@ -2700,6 +2724,7 @@ export const useEditor = create<EditorState>()(
         inspectorOpen: s.inspectorOpen,
         tipsEnabled: s.tipsEnabled,
         hoverEdgeConnectors: s.hoverEdgeConnectors,
+        pinnedIconPacks: s.pinnedIconPacks,
       }),
       // Bindings are no longer user-rebindable, so we ignore any stored
       // hotkeyBindings and always boot with the current DEFAULT_BINDINGS.

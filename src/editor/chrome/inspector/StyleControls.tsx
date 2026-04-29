@@ -43,8 +43,28 @@ const STROKE_PRESETS: Preset[] = [
   { label: 'mono', value: 'var(--mono)' },
 ];
 
+// Why fill carries BOTH `paper` and `ink` (stroke/text only need `ink`):
+//
+// `mono` is the opposite-of-ink contrast swatch — black in dark mode, white
+// in light mode. On its own it covers exactly ONE extreme of the canvas.
+// Stroke + text pair it with `ink` (which flips: near-white in dark,
+// near-black in light), so those rows always have access to both pure-black
+// AND pure-white regardless of theme.
+//
+// Fill used to pair `mono` with `paper`. But `paper` doesn't flip the same
+// way: in dark mode it's the dark canvas slate, in light mode it's near-white
+// — so the dark-mode fill row offered slate + black (no white), and the
+// light-mode fill row offered near-white + white (no black). The user
+// couldn't paint a white fill on a dark canvas, or a black fill on a light
+// canvas, without dropping into the custom colour picker.
+//
+// Keeping `paper` is still useful — it's the "blend with the canvas"
+// semantic, distinct from `transparent` because paper paints over whatever
+// is underneath. Adding `ink` alongside it gives fill the same pure-black
+// + pure-white guarantee that stroke/text already have.
 const FILL_PRESETS: Preset[] = [
   { label: 'paper', value: 'var(--paper)' },
+  { label: 'ink', value: 'var(--ink)' },
   ...FILL_SWATCHES.map((s) => ({
     label: s.label,
     value: s.cssVar,
@@ -119,13 +139,23 @@ export function SwatchRow({
 
   return (
     <div ref={wrapperRef} className="flex items-center gap-[3px] flex-wrap">
+      {/* Auto/default cell — `A` for "auto". Visually grouped as its own
+       *  thing with a right margin so it's clearly distinct from the colour
+       *  presets that follow. Without the spacer, in dark mode the cell's
+       *  bg-subtle (#161b22) sits right next to var(--paper) (#1d2230) for
+       *  the .fill row, and the two near-identical slates make the auto
+       *  cell read as "missing" — for .stroke/.text the adjacent --ink is
+       *  near-white so the auto cell pops naturally. The "A" itself uses
+       *  text-fg (not text-fg-muted) so it stays legible regardless of
+       *  what colour the kind happens to put next to it. */}
       <SwatchCell
-        title="default"
+        title="default (auto)"
         active={isDefault}
         onClick={() => onChange(undefined)}
       >
-        <span className="font-mono text-[8px] text-fg-muted">A</span>
+        <span className="font-mono text-[10px] text-fg leading-none">A</span>
       </SwatchCell>
+      <span aria-hidden className="inline-block w-[5px] shrink-0" />
       {presets.map((p) => (
         <SwatchCellWithShades
           key={p.value}
