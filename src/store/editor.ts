@@ -571,6 +571,21 @@ export type EditorState = {
   // broken if it reset every session.
   pinnedIconPacks: string[];
   togglePinnedIconPack: (vendorKey: string) => void;
+
+  // —— embed (Blueprintr overlay) ——
+  // Driven from outside via embedBridge; consumed by EmbedView's SVG
+  // attribute toggling and reveal animation. Pure store slots — Vellum
+  // core itself doesn't read these, only the overlay does.
+  readOnly: boolean;
+  setReadOnly: (v: boolean) => void;
+  highlightedShapeIds: string[];
+  setHighlightedShapeIds: (ids: string[]) => void;
+  activeHighlightedShapeId: string | null;
+  setActiveHighlightedShapeId: (id: string | null) => void;
+  /** Monotonic counter; bump to fire a one-shot reveal animation in the
+   *  embed viewer. Subscribers diff old vs new tick to detect a fire. */
+  revealTick: number;
+  triggerReveal: () => void;
 };
 
 /** Persisted slice — hotkey bindings, theme, and the user's personal shape
@@ -2703,6 +2718,18 @@ export const useEditor = create<EditorState>()(
             }
             return { pinnedIconPacks: [vendorKey, ...s.pinnedIconPacks] };
           }),
+
+        // embed — Blueprintr overlay slots. Wired by embedBridge in
+        // response to host postMessages; read by EmbedView's effects.
+        readOnly: false,
+        setReadOnly: (v) => set({ readOnly: v }),
+        highlightedShapeIds: [],
+        setHighlightedShapeIds: (ids) => set({ highlightedShapeIds: ids }),
+        activeHighlightedShapeId: null,
+        setActiveHighlightedShapeId: (id) =>
+          set({ activeHighlightedShapeId: id }),
+        revealTick: 0,
+        triggerReveal: () => set((s) => ({ revealTick: s.revealTick + 1 })),
       };
     },
     {
