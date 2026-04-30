@@ -40,3 +40,6 @@ docs/
 # vellum-iconpacks/raw-icons/ tree. Keep public/icons/ out of git so we
 # don't accidentally commit trademarked vendor SVGs into the OSS core.
 public/icons/
+
+# Claude Cowork auto-memory dump — personal scratchpad, never commit
+CLAUDE_MEMORY.md

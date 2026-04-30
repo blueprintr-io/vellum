@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useEditor } from '@/store/editor';
 import { usePlugins } from '@/plugins/PluginProvider';
 import type { PluginContextMenuEntry } from '@/plugins/types';
@@ -116,11 +116,49 @@ export function ContextMenu({
     };
   }, [onClose]);
 
-  // Clamp the menu inside the viewport so it doesn't get cropped at the edge.
-  const menuW = 200;
-  const menuH = 280;
-  const x = Math.min(state.x, window.innerWidth - menuW - 4);
-  const y = Math.min(state.y, window.innerHeight - menuH - 4);
+  // Position the menu inside the viewport. We can't just clamp using a
+  // hardcoded height because the menu's row count varies a lot (cell context
+  // adds ~6 rows, plugins can add more, etc.) — so we render once at the
+  // requested point, measure, then flip/clamp using the real bounding rect.
+  // First paint uses `visibility: hidden` so the measurement pass isn't seen.
+  const [pos, setPos] = useState<{ x: number; y: number; ready: boolean }>({
+    x: state.x,
+    y: state.y,
+    ready: false,
+  });
+
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const margin = 4;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Horizontal: prefer the requested x, but if the menu would overflow the
+    // right edge, flip it to the left of the click point. Then clamp so it
+    // never goes past the left edge either (tiny viewports).
+    let x = state.x;
+    if (x + rect.width + margin > vw) {
+      const flipped = state.x - rect.width;
+      x = flipped >= margin ? flipped : Math.max(margin, vw - rect.width - margin);
+    }
+    if (x < margin) x = margin;
+
+    // Vertical: same idea — flip above the click if there's no room below,
+    // otherwise clamp to the top edge.
+    let y = state.y;
+    if (y + rect.height + margin > vh) {
+      const flipped = state.y - rect.height;
+      y = flipped >= margin ? flipped : Math.max(margin, vh - rect.height - margin);
+    }
+    if (y < margin) y = margin;
+
+    setPos({ x, y, ready: true });
+    // We only want to measure on initial open / when the requested point
+    // changes. The menu's contents are stable for a given target.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.x, state.y, state.target]);
 
   const item = (
     label: string,
@@ -243,7 +281,13 @@ export function ContextMenu({
     <div
       ref={wrapRef}
       className="float fixed z-[40] py-1 w-[200px]"
-      style={{ left: x, top: y }}
+      style={{
+        left: pos.x,
+        top: pos.y,
+        // Hide the first measurement paint so users don't see the menu pop
+        // at the wrong spot before it flips.
+        visibility: pos.ready ? 'visible' : 'hidden',
+      }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {isOnEntity ? (

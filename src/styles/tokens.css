@@ -40,7 +40,7 @@
    * is kept so existing `var(--paper)` references in shape styling
    * (notes, fills, swatches) continue to resolve. Light-mode
    * canvas keeps the literal `--paper` semantic. */
-  --slate: #1d2230;
+  --slate: #171b21;
   --paper: var(--slate);
   --paper-grid: #2f3645;
   --ink: #e6edf3;
