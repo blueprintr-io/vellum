@@ -2533,6 +2533,12 @@ export const useEditor = create<EditorState>()(
           const frameW = Math.max(childW + 200, 260);
           const frameH = Math.max(childH + 120, 160);
           const containerId = newId('container');
+          // Stamp the new container at the top of the z stack. Its members
+          // (the anchor child, plus any later adoptees) are kept above the
+          // container by Canvas.tsx's effective-z floor, so a high container
+          // z doesn't paint over the children — it only positions the
+          // container relative to non-members.
+          const containerZ = nextZ(get());
           const container: Shape = {
             id: containerId,
             kind: 'container',
@@ -2545,6 +2551,7 @@ export const useEditor = create<EditorState>()(
             h: frameH,
             label: '',
             layer: sh.layer,
+            z: containerZ,
             // Pin the label to THIS shape — the original wrapped child.
             // Subsequent drop-ins are siblings; without this pin, label
             // positioning re-picks by array order and shifts with adoption.

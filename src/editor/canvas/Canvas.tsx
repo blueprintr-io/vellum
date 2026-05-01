@@ -5235,12 +5235,14 @@ export function Canvas() {
       )}
 
       <g transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
-        {/* Frame bodies (groups + containers) always sit at the back so they
-         *  don't paint over their children. Everything else (non-frame shapes
-         *  + connectors) is rendered in unified z-order — the most-recently-
-         *  drawn item wins the top slot until the user reorders. */}
+        {/* Group bodies always sit at the back — group membership is sticky
+         *  and the group frame is purely chrome, so it must never paint over
+         *  its members. Containers DO participate in the unified z-order
+         *  pass below; their members are bumped above them via effective z
+         *  so the container can be placed in front of / behind non-members
+         *  while still sitting behind its own children. */}
         {visibleShapes
-          .filter((s) => s.kind === 'group' || s.kind === 'container')
+          .filter((s) => s.kind === 'group')
           .map((s) => (
             <Shape key={s.id} shape={s} />
           ))}
@@ -5351,16 +5353,40 @@ export function Canvas() {
             | { kind: 'connector'; item: ConnectorT };
           const items: Item[] = [
             ...visibleShapes
-              .filter((s) => s.kind !== 'group' && s.kind !== 'container')
+              .filter((s) => s.kind !== 'group')
               .map((s) => ({ kind: 'shape' as const, item: s })),
             ...visibleConnectors.map((c) => ({
               kind: 'connector' as const,
               item: c,
             })),
           ];
-          // Sort by z; tie-break by array position (already implicit via
-          // stable sort on most engines).
-          items.sort((a, b) => (a.item.z ?? 0) - (b.item.z ?? 0));
+          // Effective z for a shape: max of its own z and (parent container's
+          // effective z + epsilon), walked recursively up the parent chain.
+          // This guarantees a member always sorts above its parent container
+          // even when the container has been raised in front of an outsider —
+          // the container competes with outsiders on its own raw z, and only
+          // the floor pushes its members out of the way.
+          const shapeById = new Map(visibleShapes.map((s) => [s.id, s]));
+          const effZCache = new Map<string, number>();
+          const effZOfShape = (sh: ShapeT): number => {
+            const cached = effZCache.get(sh.id);
+            if (cached !== undefined) return cached;
+            let z = sh.z ?? 0;
+            if (sh.parent) {
+              const p = shapeById.get(sh.parent);
+              if (p && p.kind === 'container') {
+                const floor = effZOfShape(p) + 0.5;
+                if (floor > z) z = floor;
+              }
+            }
+            effZCache.set(sh.id, z);
+            return z;
+          };
+          const itemZ = (it: Item): number =>
+            it.kind === 'shape' ? effZOfShape(it.item) : it.item.z ?? 0;
+          // Sort by effective z; tie-break by array position (already implicit
+          // via stable sort on most engines).
+          items.sort((a, b) => itemZ(a) - itemZ(b));
           return items.map((it) =>
             it.kind === 'shape' ? (
               <Shape key={`s-${it.item.id}`} shape={it.item} />
