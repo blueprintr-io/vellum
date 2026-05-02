@@ -45,10 +45,13 @@ export function Actions() {
             : p.toolbarButtons;
         return <Fragment key={p.id}>{node}</Fragment>;
       })}
+      {/* Copy-PNG is also in the hamburger menu, so it's hidden at < md
+       *  to free chrome budget on tablets/phones. */}
       <ChromeButton
         title="Copy diagram as PNG"
         onClick={() => void handleCopyPng()}
         iconOnly
+        className="hidden md:inline-flex"
       >
         <I.copy />
       </ChromeButton>
@@ -234,6 +237,7 @@ type ChromeButtonProps = {
   onClick?: () => void;
   iconOnly?: boolean;
   active?: boolean;
+  className?: string;
   children: React.ReactNode;
 };
 
@@ -242,6 +246,7 @@ function ChromeButton({
   onClick,
   iconOnly,
   active,
+  className,
   children,
 }: ChromeButtonProps) {
   return (
@@ -252,7 +257,7 @@ function ChromeButton({
         active ? 'border-accent/40 bg-bg-emphasis' : 'border-border bg-bg/[0.92]'
       } backdrop-blur-chrome text-fg text-[12px] font-medium shadow-[0_2px_8px_rgb(0_0_0_/_0.12)] hover:bg-bg-emphasis transition-colors duration-100 ${
         iconOnly ? 'w-[34px] p-[7px] justify-center' : 'px-3 py-[7px]'
-      }`}
+      } ${className ?? ''}`}
     >
       {children}
     </button>

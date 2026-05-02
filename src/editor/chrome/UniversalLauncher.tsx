@@ -438,7 +438,7 @@ export function UniversalLauncher() {
 
   return (
     <div
-      className="absolute inset-0 z-[60] flex items-start justify-center pt-[14vh]"
+      className="absolute inset-0 z-[60] flex items-start justify-center pt-[6vh] sm:pt-[14vh] px-3"
       onPointerDown={(e) => {
         // Click on the backdrop closes; clicks on the card stop propagation
         // below so they don't reach this handler.
@@ -450,7 +450,7 @@ export function UniversalLauncher() {
       }}
     >
       <div
-        className="float w-[520px] max-h-[60vh] flex flex-col overflow-hidden"
+        className="float w-[min(520px,100%)] max-h-[70vh] sm:max-h-[60vh] flex flex-col overflow-hidden"
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="relative px-[10px] pt-[10px] pb-[8px] border-b border-border">

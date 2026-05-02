@@ -11,7 +11,7 @@ export function UndoDock() {
   const canRedo = useEditor((s) => s.future.length > 0);
 
   return (
-    <div className="float absolute bottom-[14px] right-[182px] z-[15] flex items-stretch h-9 overflow-hidden">
+    <div className="float absolute bottom-[14px] right-[136px] sm:right-[182px] z-[15] flex items-stretch h-9 overflow-hidden">
       <button
         onClick={undo}
         disabled={!canUndo}

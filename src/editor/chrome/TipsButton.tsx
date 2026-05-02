@@ -85,7 +85,10 @@ export function TipsButton() {
   return (
     <div
       ref={wrapRef}
-      className="absolute bottom-[14px] right-[136px] z-[15]"
+      // Hidden on phones — the tips popover is keyboard-shortcut-heavy
+      // and most of its content doesn't apply to touch users. Saves
+      // bottom-right chrome budget.
+      className="hidden sm:block absolute bottom-[14px] right-[136px] z-[15]"
     >
       <button
         title="Tips & shortcuts"

@@ -85,12 +85,12 @@ export function Brand() {
     : null;
 
   return (
-    <div className="float absolute top-[14px] left-[14px] z-20 flex items-center gap-[10px] py-[7px] pl-2 pr-2">
+    <div className="float absolute top-[14px] left-[14px] z-20 flex items-center gap-[10px] py-[7px] pl-2 pr-2 max-w-[calc(100vw-180px)] sm:max-w-none">
       <span className="flex-shrink-0 w-[26px] h-[26px] rounded-md bg-paper text-ink font-sketch text-[18px] font-bold flex items-center justify-center overflow-hidden">
         {brandIconNode ?? <BrandMark />}
       </span>
-      <div className="flex flex-col leading-[1.1] gap-[2px]">
-        <span className="text-[12px] font-medium flex items-center gap-[6px]">
+      <div className="flex flex-col leading-[1.1] gap-[2px] min-w-0">
+        <span className="text-[12px] font-medium flex items-center gap-[6px] min-w-0">
           {editing ? (
             <input
               ref={inputRef}
@@ -117,27 +117,29 @@ export function Brand() {
                 setEditing(true);
               }}
               title="Rename diagram"
-              className="bg-transparent border-none p-0 m-0 text-[12px] font-medium text-fg hover:underline cursor-text"
+              className="bg-transparent border-none p-0 m-0 text-[12px] font-medium text-fg hover:underline cursor-text truncate min-w-0"
             >
               {title}
             </button>
           )}
-          <span className="text-fg-muted font-mono text-[10px]">
+          <span className="text-fg-muted font-mono text-[10px] hidden md:inline">
             .vellum
           </span>
           {dirty && (
             <span
-              className="w-[5px] h-[5px] rounded-full bg-accent"
+              className="flex-shrink-0 w-[5px] h-[5px] rounded-full bg-accent"
               title="Unsaved"
             />
           )}
         </span>
-        <span className="font-mono text-[9px] text-fg-muted">{subline}</span>
+        <span className="font-mono text-[9px] text-fg-muted truncate hidden md:inline">{subline}</span>
       </div>
       {/* Toggle → opens the persistent left-rail library card. Uses the
        *  shapes glyph (same as the floating-toolbar shapes button) so the
        *  affordance reads as "this opens the shapes/icons panel" rather
-       *  than a generic expand caret. */}
+       *  than a generic expand caret. Hidden on phones — the same toggle
+       *  exists in the floating toolbar, no need to duplicate at narrow
+       *  widths where the brand row is already tight. */}
       <button
         onClick={toggleLibraryPanel}
         title={
@@ -146,7 +148,7 @@ export function Brand() {
             : 'Open shapes & icons panel'
         }
         aria-pressed={libraryPanelOpen}
-        className={`flex-shrink-0 w-[24px] h-[24px] rounded-md flex items-center justify-center bg-transparent border border-transparent text-fg-muted hover:bg-bg-emphasis hover:text-fg ml-1 ${
+        className={`hidden md:flex flex-shrink-0 w-[24px] h-[24px] rounded-md items-center justify-center bg-transparent border border-transparent text-fg-muted hover:bg-bg-emphasis hover:text-fg ml-1 ${
           libraryPanelOpen ? 'bg-bg-emphasis text-fg' : ''
         }`}
       >

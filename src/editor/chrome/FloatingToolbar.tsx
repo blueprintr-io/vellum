@@ -37,7 +37,13 @@ export function FloatingToolbar() {
   const notesButtonVisible = layerMode === 'notes' || layerMode === 'both';
 
   return (
-    <div className="float absolute top-[14px] left-1/2 -translate-x-1/2 z-[15] flex gap-[2px] p-[5px]">
+    // At < md the toolbar drops to a second row that spans the viewport
+    // and scrolls horizontally — the centred desktop layout doesn't fit
+    // alongside the Brand and Actions clusters on tablets/phones.
+    // [scrollbar-width:none] hides the native scrollbar; the row is short
+    // enough that users discover the swipe affordance from the visible
+    // overflow edges.
+    <div className="float absolute top-[58px] left-[14px] right-[14px] translate-x-0 z-[15] flex gap-[2px] p-[5px] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:top-[14px] md:left-1/2 md:right-auto md:-translate-x-1/2 md:overflow-visible">
       <ToolButton
         title={
           toolLock
@@ -173,7 +179,7 @@ export function FloatingToolbar() {
 }
 
 function Divider() {
-  return <div className="w-px my-[6px] mx-1 bg-border" />;
+  return <div className="w-px flex-shrink-0 my-[6px] mx-1 bg-border" />;
 }
 
 type ToolButtonProps = {
@@ -206,7 +212,7 @@ function ToolButton({
       title={title}
       onClick={onClick}
       {...(dataAttr ? { [`data-${dataAttr}`]: true } : {})}
-      className={`relative w-9 h-9 flex items-center justify-center rounded-md border transition-[background,color,border-color] duration-100 ${
+      className={`relative w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-md border transition-[background,color,border-color] duration-100 ${
         active
           ? activeStyles
           : `bg-transparent border-transparent ${baseColour} hover:bg-bg-emphasis`

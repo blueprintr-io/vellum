@@ -9,7 +9,10 @@ export function GlobalDock() {
     <div className="absolute bottom-[6px] left-[14px] z-[15] flex gap-2 items-start">
       <div className="flex flex-col items-center gap-[2px]">
         <LayerPills />
-        <span className="text-[9px] text-fg-muted/70 tracking-[0.02em] select-none">
+        {/* Attribution copy is hidden at < md — eats too much chrome budget
+         *  on phones/small tablets, and the same links live in the
+         *  Legal/About surfaces. */}
+        <span className="hidden md:inline text-[9px] text-fg-muted/70 tracking-[0.02em] select-none">
           <a
             href="https://github.com/blueprintr-io/vellum"
             target="_blank"

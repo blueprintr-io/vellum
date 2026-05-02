@@ -94,7 +94,7 @@ export function SaveDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[50] flex items-center justify-center bg-black/40">
-      <div ref={wrapRef} className="float w-[360px] p-4">
+      <div ref={wrapRef} className="float w-[min(360px,92vw)] p-4">
         <div className="text-[14px] font-semibold mb-1">Save</div>
         <div className="text-[11px] text-fg-muted mb-3">
           {title}.{format}

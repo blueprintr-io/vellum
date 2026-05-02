@@ -73,9 +73,11 @@ export function LibraryPanel() {
 
   return (
     <div
-      // top: under the Brand card; bottom: above the global dock row.
-      // 240px wide is enough for a 3-col tile grid plus padding.
-      className="float absolute left-[14px] top-[70px] bottom-[70px] z-[15] w-[240px] flex flex-col overflow-hidden"
+      // Phones: full-width bottom sheet (top:auto, bottom:0, ~60vh tall),
+      // raised above the bottom-row docks so the sheet visually pops on top.
+      // sm and up: original left-rail card — top under the Brand, bottom
+      // above the global dock row, 240px wide for the 3-col tile grid.
+      className="float absolute z-30 sm:z-[15] flex flex-col overflow-hidden inset-x-0 bottom-0 top-auto h-[60vh] rounded-b-none sm:left-[14px] sm:right-auto sm:top-[70px] sm:bottom-[70px] sm:w-[240px] sm:h-auto sm:rounded-b-[10px]"
     >
       {/* Header — title + collapse button. The collapse target is the same
        *  Brand-side toggle, so users have two equivalent ways to dismiss. */}

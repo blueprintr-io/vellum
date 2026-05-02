@@ -63,7 +63,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[55] flex items-start justify-center pt-[14vh]"
+      className="fixed inset-0 z-[55] flex items-start justify-center pt-[6vh] sm:pt-[14vh] px-3"
       style={{
         background: 'rgba(0, 0, 0, 0.18)',
         backdropFilter: 'blur(2px)',
@@ -71,7 +71,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     >
       <div
         ref={wrapRef}
-        className="float w-[420px] max-h-[70vh] overflow-y-auto py-2"
+        className="float w-[min(420px,100%)] max-h-[80vh] sm:max-h-[70vh] overflow-y-auto py-2"
       >
         <div className="px-3 py-1 text-[12px] font-semibold flex items-center justify-between">
           <span>Settings</span>

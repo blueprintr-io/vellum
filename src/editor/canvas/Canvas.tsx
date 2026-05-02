@@ -283,7 +283,22 @@ type Interaction =
       startFraction: number;
       moved: boolean;
     }
-  | { kind: 'panning'; pointerStart: Pt; panStart: Pt };
+  | { kind: 'panning'; pointerStart: Pt; panStart: Pt }
+  | {
+      /** Two-finger pinch — the only multi-touch gesture. The first finger
+       *  may have already started a different gesture (drag, marquee, etc.)
+       *  before the second came down; that prior gesture is abandoned at
+       *  the moment we transition to pinching, and we go back to `idle`
+       *  when either finger lifts (no auto-resume — a user "with one
+       *  finger left" would just retap to start a new gesture). All four
+       *  positions are stored in CLIENT coordinates (not rect-relative);
+       *  the move handler subtracts the SVG rect on each frame. */
+      kind: 'pinching';
+      panStart: Pt;
+      zoomStart: number;
+      f0Start: Pt;
+      f1Start: Pt;
+    };
 
 /** Pixel distance (in screen pixels — divided by zoom at use site) from the
  *  top edge of the bounding box to the rotation handle's center. Matches
@@ -321,6 +336,13 @@ type Preview =
 /** Number of pixels of pointer travel before a drag is "real" (i.e. moved=true).
  *  Below this, the drag is treated as a click and selection logic runs on up. */
 const DRAG_THRESHOLD = 3;
+
+/** Touch long-press: how long a single-finger touch must dwell (ms) before
+ *  it opens the context menu, and how far the finger can drift (px) before
+ *  the timer is cancelled in favour of a real drag. Tuned so a deliberate
+ *  hold is unambiguous but a slightly-shaky tap doesn't accidentally fire. */
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_PX = 6;
 
 /** Tag we prefix our serialized clipboard payload with so the paste handler
  *  can recognise it on the way back. */
@@ -814,6 +836,19 @@ export function Canvas() {
 
   // interaction
   const interactionRef = useRef<Interaction>({ kind: 'idle' });
+  // Active touch pointers, keyed by pointerId. Only populated for
+  // pointerType === 'touch' — mouse and pen never enter this map, so
+  // their gesture pipeline is unchanged. We use this both to detect
+  // pinch (size >= 2) and to read the current finger positions inside
+  // pointermove without re-querying the DOM.
+  const touchPointersRef = useRef<Map<number, { x: number; y: number }>>(
+    new Map(),
+  );
+  // Long-press timer for the touch context-menu substitute. Set on
+  // single-finger pointerdown, cleared on movement past LONG_PRESS_PX,
+  // pointerup, or transition to pinch. Holds a setTimeout id.
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressStartRef = useRef<Pt | null>(null);
   const [preview, setPreview] = useState<Preview>(null);
   const pointerDownRef = useRef<number | null>(null);
 
@@ -1580,9 +1615,148 @@ export function Canvas() {
     [visibleConnectors, rawShapes],
   );
 
+  // Open the context menu at a client-space coordinate. Reused by both
+  // the React onContextMenu (right-click) handler and the touch long-
+  // press timer in onPointerDown — same surface, different trigger.
+  const openContextMenuAtClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const world = eventToWorld({ clientX, clientY });
+      const handle = connectorHandleUnder(world);
+      if (handle && handle.kind === 'waypoint') {
+        const conn = useEditor
+          .getState()
+          .diagram.connectors.find((c) => c.id === handle.connectorId);
+        if (conn?.waypoints) {
+          const next = conn.waypoints.slice();
+          next.splice(handle.index, 1);
+          useEditor
+            .getState()
+            .updateConnector(handle.connectorId, {
+              waypoints: next.length ? next : undefined,
+            });
+        }
+        return;
+      }
+      const shapeHit = shapeUnder(world);
+      const connHit = connectorUnder(world);
+      let target: NonNullable<typeof contextMenu>['target'];
+      if (shapeHit && connHit) {
+        const sz = shapeHit.z ?? 0;
+        const cz = connHit.z ?? 0;
+        target =
+          cz >= sz
+            ? { kind: 'connector', id: connHit.id }
+            : { kind: 'shape', id: shapeHit.id };
+      } else if (shapeHit) {
+        if (shapeHit.kind === 'table') {
+          const hit = cellAtPoint(shapeHit, world);
+          target = hit
+            ? { kind: 'cell', shapeId: shapeHit.id, row: hit.row, col: hit.col }
+            : { kind: 'shape', id: shapeHit.id };
+        } else {
+          target = { kind: 'shape', id: shapeHit.id };
+        }
+      } else if (connHit) {
+        target = { kind: 'connector', id: connHit.id };
+      } else {
+        target = { kind: 'canvas' };
+      }
+      setContextMenu({ x: clientX, y: clientY, target });
+    },
+    [eventToWorld, shapeUnder, connectorUnder, connectorHandleUnder],
+  );
+
+  const onContextMenu = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      e.preventDefault();
+      openContextMenuAtClient(e.clientX, e.clientY);
+    },
+    [openContextMenuAtClient],
+  );
+
   // pointer handlers
   const onPointerDown = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
+      // Touch-specific: track the finger and watch for a second one so we
+      // can switch into pinch mode. Mouse and pen events skip this branch
+      // entirely — desktop interaction is unchanged.
+      if (e.pointerType === 'touch') {
+        touchPointersRef.current.set(e.pointerId, {
+          x: e.clientX,
+          y: e.clientY,
+        });
+        // Second finger down → abandon any in-flight single-finger gesture
+        // and enter pinch. We don't try to "resume" the prior gesture when
+        // the second finger lifts — a user with one finger remaining
+        // simply lifts and retaps to start a new gesture.
+        if (touchPointersRef.current.size >= 2) {
+          if (longPressTimerRef.current != null) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+          longPressStartRef.current = null;
+          if (pointerDownRef.current != null) {
+            try {
+              (e.target as Element).releasePointerCapture?.(
+                pointerDownRef.current,
+              );
+            } catch {
+              // releasePointerCapture throws if the id wasn't captured;
+              // safe to ignore — we just want it gone.
+            }
+            pointerDownRef.current = null;
+          }
+          const fingers = Array.from(touchPointersRef.current.values());
+          const [f0, f1] = fingers;
+          const { pan: panNow, zoom: zoomNow } = useEditor.getState();
+          setInteraction({
+            kind: 'pinching',
+            panStart: { x: panNow.x, y: panNow.y },
+            zoomStart: zoomNow,
+            f0Start: f0,
+            f1Start: f1,
+          });
+          // Clear any preview the prior gesture put up so the canvas
+          // doesn't render a stale marquee / ghost shape under the pinch.
+          setPreview(null);
+          return;
+        }
+        // First finger — arm the long-press timer. Only fires if the
+        // user keeps the finger roughly still for LONG_PRESS_MS; on
+        // movement past LONG_PRESS_PX, pointermove cancels it. The fire
+        // checks the live interaction state so a deliberate drag (which
+        // might already be past the threshold but not yet have fired
+        // pointermove on this tick) never overlays a context menu.
+        longPressStartRef.current = { x: e.clientX, y: e.clientY };
+        if (longPressTimerRef.current != null) {
+          clearTimeout(longPressTimerRef.current);
+        }
+        const startX = e.clientX;
+        const startY = e.clientY;
+        longPressTimerRef.current = window.setTimeout(() => {
+          longPressTimerRef.current = null;
+          longPressStartRef.current = null;
+          const cur = interactionRef.current;
+          // Only fire on near-stationary holds in benign states. A real
+          // drag (creating-shape, dragging beyond threshold, marquee with
+          // movement) takes priority — the user is mid-gesture, not
+          // requesting a context menu.
+          const benign =
+            cur.kind === 'idle' ||
+            (cur.kind === 'dragging' && !cur.moved) ||
+            (cur.kind === 'marquee' &&
+              Math.hypot(
+                cur.current.x - cur.start.x,
+                cur.current.y - cur.start.y,
+              ) < 2);
+          if (!benign) return;
+          if (cur.kind !== 'idle') {
+            setInteraction({ kind: 'idle' });
+            setPreview(null);
+          }
+          openContextMenuAtClient(startX, startY);
+        }, LONG_PRESS_MS);
+      }
       // Any pointer-down clears the hover state — otherwise the ring/cursor
       // can linger from before the click while we wait for the next move.
       // Functional form so we don't depend on a possibly-stale `hover` closure.
@@ -2512,11 +2686,73 @@ export function Canvas() {
       addConnector,
       toolLock,
       setActiveTool,
+      openContextMenuAtClient,
     ],
   );
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
+      // Touch bookkeeping: keep finger positions current and cancel the
+      // long-press timer once the user has clearly drifted into a drag.
+      if (e.pointerType === 'touch') {
+        if (touchPointersRef.current.has(e.pointerId)) {
+          touchPointersRef.current.set(e.pointerId, {
+            x: e.clientX,
+            y: e.clientY,
+          });
+        }
+        if (longPressStartRef.current && longPressTimerRef.current != null) {
+          const dx = e.clientX - longPressStartRef.current.x;
+          const dy = e.clientY - longPressStartRef.current.y;
+          if (dx * dx + dy * dy > LONG_PRESS_PX * LONG_PRESS_PX) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+            longPressStartRef.current = null;
+          }
+        }
+      }
+      // Pinch — drive zoom + pan directly from the two finger positions.
+      // We solve for new (zoom, pan) such that the world point under the
+      // initial centroid stays under the live centroid, and the fingers'
+      // screen-space distance scales the zoom relative to the snapshot.
+      if (interactionRef.current.kind === 'pinching') {
+        const fingers = Array.from(touchPointersRef.current.values());
+        if (fingers.length >= 2) {
+          const cur = interactionRef.current;
+          const rect = getRect();
+          const [f0, f1] = fingers;
+          const f0sx = cur.f0Start.x - rect.left;
+          const f0sy = cur.f0Start.y - rect.top;
+          const f1sx = cur.f1Start.x - rect.left;
+          const f1sy = cur.f1Start.y - rect.top;
+          const f0cx = f0.x - rect.left;
+          const f0cy = f0.y - rect.top;
+          const f1cx = f1.x - rect.left;
+          const f1cy = f1.y - rect.top;
+          const d0 = Math.hypot(f0sx - f1sx, f0sy - f1sy);
+          const d = Math.hypot(f0cx - f1cx, f0cy - f1cy);
+          if (d0 > 0 && d > 0) {
+            const newZoom = Math.max(
+              0.1,
+              Math.min(8, cur.zoomStart * (d / d0)),
+            );
+            const realFactor = newZoom / cur.zoomStart;
+            const cxs = (f0sx + f1sx) / 2;
+            const cys = (f0sy + f1sy) / 2;
+            const cxc = (f0cx + f1cx) / 2;
+            const cyc = (f0cy + f1cy) / 2;
+            // world = (cxs - panStart) / zoomStart;
+            // newPan = cxc - world * newZoom = cxc - (cxs - panStart) * realFactor
+            const newPanX = cxc - (cxs - cur.panStart.x) * realFactor;
+            const newPanY = cyc - (cys - cur.panStart.y) * realFactor;
+            useEditor.setState({
+              zoom: newZoom,
+              pan: { x: newPanX, y: newPanY },
+            });
+          }
+        }
+        return;
+      }
       // Always update the cursor tracker so the paste-at-cursor + library-
       // drop logic has a fresh world position even when no gesture is active.
       cursorWorldRef.current = eventToWorld(e);
@@ -3724,6 +3960,25 @@ export function Canvas() {
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
+      // Touch bookkeeping. Drop this finger from the tracking Map and
+      // cancel any pending long-press. If we were pinching, end the
+      // gesture as soon as we drop below 2 fingers (no auto-resume of
+      // a prior gesture — the user lifts and retaps for the next one).
+      if (e.pointerType === 'touch') {
+        touchPointersRef.current.delete(e.pointerId);
+        if (longPressTimerRef.current != null) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+        longPressStartRef.current = null;
+        if (interactionRef.current.kind === 'pinching') {
+          if (touchPointersRef.current.size < 2) {
+            setInteraction({ kind: 'idle' });
+            setPreview(null);
+          }
+          return;
+        }
+      }
       const cur = interactionRef.current;
       if (pointerDownRef.current === e.pointerId) {
         (e.target as Element).releasePointerCapture?.(e.pointerId);
@@ -4940,63 +5195,6 @@ export function Canvas() {
       }
     },
     [addShape, eventToWorld],
-  );
-
-  // right-click → open context menu
-  const onContextMenu = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      e.preventDefault();
-      const world = eventToWorld(e);
-      // Right-click on a connector waypoint deletes that bend in one shot —
-      // no menu needed (and the menu offers nothing else relevant for a bend).
-      const handle = connectorHandleUnder(world);
-      if (handle && handle.kind === 'waypoint') {
-        const conn = useEditor
-          .getState()
-          .diagram.connectors.find((c) => c.id === handle.connectorId);
-        if (conn?.waypoints) {
-          const next = conn.waypoints.slice();
-          next.splice(handle.index, 1);
-          useEditor
-            .getState()
-            .updateConnector(handle.connectorId, {
-              waypoints: next.length ? next : undefined,
-            });
-        }
-        return;
-      }
-      // Same z-priority rule as the left-click hit-test — right-click on a
-      // connector that overlaps a shape should target the connector when it
-      // sits visually on top.
-      const shapeHit = shapeUnder(world);
-      const connHit = connectorUnder(world);
-      let target: NonNullable<typeof contextMenu>['target'];
-      if (shapeHit && connHit) {
-        const sz = shapeHit.z ?? 0;
-        const cz = connHit.z ?? 0;
-        target =
-          cz >= sz
-            ? { kind: 'connector', id: connHit.id }
-            : { kind: 'shape', id: shapeHit.id };
-      } else if (shapeHit) {
-        // Right-click on a table → resolve to the specific cell so the
-        // menu can offer cell-scoped ops (insert / delete row / col).
-        if (shapeHit.kind === 'table') {
-          const hit = cellAtPoint(shapeHit, world);
-          target = hit
-            ? { kind: 'cell', shapeId: shapeHit.id, row: hit.row, col: hit.col }
-            : { kind: 'shape', id: shapeHit.id };
-        } else {
-          target = { kind: 'shape', id: shapeHit.id };
-        }
-      } else if (connHit) {
-        target = { kind: 'connector', id: connHit.id };
-      } else {
-        target = { kind: 'canvas' };
-      }
-      setContextMenu({ x: e.clientX, y: e.clientY, target });
-    },
-    [eventToWorld, shapeUnder, connectorUnder, connectorHandleUnder],
   );
 
   // double-click → text edit on a shape, or fresh text shape on empty

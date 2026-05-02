@@ -32,7 +32,7 @@ export function ConnectorInspector({
   void shapes;
 
   return (
-    <div className="float absolute top-[70px] right-[14px] z-[14] w-[280px] max-h-[calc(100vh-100px)] overflow-y-auto">
+    <div className="float absolute z-[25] sm:z-[14] overflow-y-auto inset-x-0 bottom-0 top-auto h-[60vh] max-h-none rounded-b-none sm:left-auto sm:right-[14px] sm:top-[70px] sm:bottom-auto sm:w-[280px] sm:h-auto sm:max-h-[calc(100vh-100px)] sm:rounded-b-[10px]">
       <div className="px-[14px] py-3 border-b border-border flex items-center justify-between">
         <div className="text-[12px] font-semibold flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-accent" />
