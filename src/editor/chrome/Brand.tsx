@@ -87,7 +87,7 @@ export function Brand() {
   return (
     <div className="float absolute top-[14px] left-[14px] z-20 flex items-center gap-[10px] py-[7px] pl-2 pr-2">
       <span className="flex-shrink-0 w-[26px] h-[26px] rounded-md bg-paper text-ink font-sketch text-[18px] font-bold flex items-center justify-center overflow-hidden">
-        {brandIconNode ?? 'V'}
+        {brandIconNode ?? <BrandMark />}
       </span>
       <div className="flex flex-col leading-[1.1] gap-[2px]">
         <span className="text-[12px] font-medium flex items-center gap-[6px]">
@@ -153,6 +153,33 @@ export function Brand() {
         <I.more />
       </button>
     </div>
+  );
+}
+
+/** Vellum brand mark: blue corner brackets framing a "V". The V uses
+ *  currentColor so it inherits `text-ink` from the wrapper and flips
+ *  with the light/dark theme automatically. */
+function BrandMark() {
+  return (
+    <svg
+      viewBox="-3620.1 -1077.4 375.2 367.91"
+      width="20"
+      height="20"
+      aria-hidden="true"
+    >
+      <path
+        d="M -3271.9 -839.57 C -3262.9 -839.57 -3254 -839.57 -3244.9 -839.57 C -3244.9 -796.67 -3244.9 -753.69 -3244.9 -709.49 C -3287.8 -709.49 -3330.6 -709.49 -3374.9 -709.49 C -3374.9 -718.4 -3374.9 -727.31 -3374.9 -736.49 C -3340.9 -736.49 -3306.9 -736.49 -3271.9 -736.49 C -3271.9 -770.48 -3271.9 -804.47 -3271.9 -839.57 Z"
+        fill="rgb(56, 139, 251)"
+      />
+      <path
+        d="M -3620.1 -1077.4 C -3577.2 -1077.4 -3534.3 -1077.4 -3490.1 -1077.4 C -3490.1 -1068.5 -3490.1 -1059.6 -3490.1 -1050.4 C -3524.1 -1050.4 -3558.1 -1050.4 -3593.1 -1050.4 C -3593.1 -1016.4 -3593.1 -982.47 -3593.1 -947.37 C -3602 -947.37 -3610.9 -947.37 -3620.1 -947.37 C -3620.1 -990.27 -3620.1 -1033.2 -3620.1 -1077.4 Z"
+        fill="rgb(56, 139, 251)"
+      />
+      <path
+        d="M -3429.3 -780.65 L -3517.3 -974.13 L -3476.9 -974.13 L -3406.3 -810.8 L -3429.7 -810.8 L -3358.7 -974.13 L -3319.9 -974.13 L -3407.9 -780.65 L -3429.3 -780.65 Z"
+        fill="currentColor"
+      />
+    </svg>
   );
 }
 
