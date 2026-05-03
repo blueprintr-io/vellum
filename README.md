@@ -1,5 +1,13 @@
 # Vellum
 
+<h2 align="center">
+  <a href="https://vellum.blueprintr.io">Demo it here → vellum.blueprintr.io</a>
+</h2>
+
+<p align="center">
+  <img src="./docs/screenshot.png" alt="Vellum diagram editor">
+</p>
+
 A diagram editor that sits between the fantastic [Excalidraw](https://excalidraw.com)
 and [draw.io](https://draw.io) — keyboard-first like the former,
 structured like the latter, hand-drawn or pin-sharp depending on which
