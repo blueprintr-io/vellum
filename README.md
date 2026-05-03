@@ -5,7 +5,7 @@
 </h2>
 
 <p align="center">
-  <img src="./docs/screenshot.png" alt="Vellum diagram editor">
+  <img src="./media/screenshot.png" alt="Vellum diagram editor">
 </p>
 
 A diagram editor that sits between the fantastic [Excalidraw](https://excalidraw.com)
